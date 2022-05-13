@@ -1,5 +1,7 @@
+using Assets.Scripts;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -10,18 +12,21 @@ public class MainManager : MonoBehaviour
     public int LineCount = 6;
     public Rigidbody Ball;
 
-    public Text ScoreText;
+    public Text ScoreText, BestScoreText;
     public GameObject GameOverText;
-    
+
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+    private SaveScore bestScore;
 
-    
     // Start is called before the first frame update
     void Start()
     {
+        bestScore = LoadScore();
+
+        BestScoreText.text = $"Score : {bestScore.Name} : {bestScore.HighScore}";
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -36,6 +41,22 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+    }
+
+    private SaveScore LoadScore()
+    {
+        SaveScore best = new SaveScore();
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            best = JsonUtility.FromJson<SaveScore>(json);
+
+            return best;
+        }
+        best.Name = "";
+        best.HighScore = 0;
+        return best;
     }
 
     private void Update()
@@ -72,5 +93,21 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        SaveScore();
+    }
+
+    public void SaveScore()
+    {
+        if (m_Points > bestScore.HighScore)
+        {
+            SaveScore data = new SaveScore();
+            data.Name = MenuUIHandler.instance.currentPlayerName;
+            data.HighScore = m_Points;
+
+            string json = JsonUtility.ToJson(data);
+
+            File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+            BestScoreText.text = $"Score : {data.Name} : {data.HighScore}";
+        }
     }
 }
